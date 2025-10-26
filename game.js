@@ -323,13 +323,13 @@ function update() {
     // Strafing left/right movement
     if (keys['KeyA'] || keys['ArrowLeft']) {
         // Move perpendicular to facing direction (left)
-        moveX += Math.cos(player.angle - Math.PI / 2) * player.moveSpeed;
-        moveY += Math.sin(player.angle - Math.PI / 2) * player.moveSpeed;
+        moveX += Math.cos(player.angle + Math.PI / 2) * player.moveSpeed;
+        moveY += Math.sin(player.angle + Math.PI / 2) * player.moveSpeed;
     }
     if (keys['KeyD'] || keys['ArrowRight']) {
         // Move perpendicular to facing direction (right)
-        moveX += Math.cos(player.angle + Math.PI / 2) * player.moveSpeed;
-        moveY += Math.sin(player.angle + Math.PI / 2) * player.moveSpeed;
+        moveX += Math.cos(player.angle - Math.PI / 2) * player.moveSpeed;
+        moveY += Math.sin(player.angle - Math.PI / 2) * player.moveSpeed;
     }
     
     // Collision detection
