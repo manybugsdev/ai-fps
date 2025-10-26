@@ -20,8 +20,9 @@ A simple browser-based FPS game built with vanilla JavaScript and Canvas 2D usin
 3. Use the following controls:
    - **W/Up Arrow** - Move forward
    - **S/Down Arrow** - Move backward
-   - **A/Left Arrow** - Rotate left
-   - **D/Right Arrow** - Rotate right
+   - **A/Left Arrow** - Strafe left
+   - **D/Right Arrow** - Strafe right
+   - **Mouse** - Look around (requires pointer lock)
    - **Click** - Shoot
    - **ESC** - Pause/Return to menu
 

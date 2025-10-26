@@ -42,6 +42,7 @@ let enemies = [];
 
 // Input handling
 const keys = {};
+let mouseMovementX = 0;
 
 // Initialize the game
 function init() {
@@ -92,9 +93,25 @@ function setupControls() {
         keys[e.code] = false;
     });
     
-    document.addEventListener('click', () => {
+    canvas.addEventListener('click', () => {
         if (gameState.playing && !gameState.paused) {
             shoot();
+            // Request pointer lock for mouse look
+            canvas.requestPointerLock();
+        }
+    });
+
+    // Mouse movement for looking around
+    document.addEventListener('mousemove', (e) => {
+        if (document.pointerLockElement === canvas && gameState.playing && !gameState.paused) {
+            mouseMovementX = e.movementX || 0;
+        }
+    });
+
+    // Handle pointer lock change
+    document.addEventListener('pointerlockchange', () => {
+        if (document.pointerLockElement !== canvas && gameState.playing && !gameState.paused) {
+            // Pointer lock lost
         }
     });
 
@@ -154,8 +171,16 @@ function togglePause() {
     gameState.paused = !gameState.paused;
     if (gameState.paused) {
         document.getElementById('menu').style.display = 'block';
+        // Exit pointer lock when paused
+        if (document.pointerLockElement) {
+            document.exitPointerLock();
+        }
     } else {
         document.getElementById('menu').style.display = 'none';
+        // Request pointer lock when unpausing
+        if (canvas) {
+            canvas.requestPointerLock();
+        }
     }
 }
 
@@ -275,25 +300,36 @@ function render() {
 function update() {
     if (!gameState.playing || gameState.paused) return;
     
-    // Handle rotation
-    if (keys['KeyA'] || keys['ArrowLeft']) {
-        player.angle -= player.rotateSpeed;
-    }
-    if (keys['KeyD'] || keys['ArrowRight']) {
-        player.angle += player.rotateSpeed;
+    // Handle mouse look (rotation)
+    if (mouseMovementX !== 0) {
+        player.angle += mouseMovementX * 0.002; // Sensitivity adjustment
+        mouseMovementX = 0; // Reset after applying
     }
     
     // Handle movement
     let moveX = 0;
     let moveY = 0;
     
+    // Forward/backward movement
     if (keys['KeyW'] || keys['ArrowUp']) {
-        moveX = Math.cos(player.angle) * player.moveSpeed;
-        moveY = Math.sin(player.angle) * player.moveSpeed;
+        moveX += Math.cos(player.angle) * player.moveSpeed;
+        moveY += Math.sin(player.angle) * player.moveSpeed;
     }
     if (keys['KeyS'] || keys['ArrowDown']) {
-        moveX = -Math.cos(player.angle) * player.moveSpeed;
-        moveY = -Math.sin(player.angle) * player.moveSpeed;
+        moveX -= Math.cos(player.angle) * player.moveSpeed;
+        moveY -= Math.sin(player.angle) * player.moveSpeed;
+    }
+    
+    // Strafing left/right movement
+    if (keys['KeyA'] || keys['ArrowLeft']) {
+        // Move perpendicular to facing direction (left)
+        moveX += Math.cos(player.angle - Math.PI / 2) * player.moveSpeed;
+        moveY += Math.sin(player.angle - Math.PI / 2) * player.moveSpeed;
+    }
+    if (keys['KeyD'] || keys['ArrowRight']) {
+        // Move perpendicular to facing direction (right)
+        moveX += Math.cos(player.angle + Math.PI / 2) * player.moveSpeed;
+        moveY += Math.sin(player.angle + Math.PI / 2) * player.moveSpeed;
     }
     
     // Collision detection
