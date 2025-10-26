@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple FPS Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="menu" class="menu">
+        <h1>Simple FPS Game</h1>
+        <p>Controls:</p>
+        <ul>
+            <li>WASD - Move</li>
+            <li>Mouse - Look around</li>
+            <li>Left Click - Shoot</li>
+            <li>ESC - Pause/Menu</li>
+        </ul>
+        <button id="startBtn">Start Game</button>
+    </div>
+
+    <div id="game-container" style="display: none;">
+        <div id="hud">
+            <div id="health">Health: <span id="healthValue">100</span></div>
+            <div id="ammo">Ammo: <span id="ammoValue">30</span></div>
+            <div id="score">Score: <span id="scoreValue">0</span></div>
+        </div>
+        <div id="crosshair"></div>
+    </div>
+
+    <div id="gameOver" class="menu" style="display: none;">
+        <h1>Game Over!</h1>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <button id="restartBtn">Restart</button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
