@@ -8,193 +8,103 @@ const gameState = {
     maxAmmo: 30
 };
 
-// Three.js scene setup
-let scene, camera, renderer;
-let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-let velocity = new THREE.Vector3();
-let direction = new THREE.Vector3();
-let enemies = [];
-let bullets = [];
+// Canvas setup
+let canvas, ctx;
+let screenWidth = window.innerWidth;
+let screenHeight = window.innerHeight;
 
-// Camera controls
-let euler = new THREE.Euler(0, 0, 0, 'YXZ');
-const PI_2 = Math.PI / 2;
+// Player
+const player = {
+    x: 5,
+    y: 5,
+    angle: 0,
+    speed: 0,
+    rotSpeed: 0,
+    fov: Math.PI / 3,
+    moveSpeed: 0.05,
+    rotateSpeed: 0.03
+};
+
+// World map (1 = wall, 0 = empty, 2 = enemy)
+const worldMap = [
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1]
+];
+
+// Enemies
+let enemies = [];
+
+// Input handling
+const keys = {};
 
 // Initialize the game
 function init() {
-    // Create scene
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87CEEB); // Sky blue
-    scene.fog = new THREE.Fog(0x87CEEB, 0, 750);
+    canvas = document.createElement('canvas');
+    canvas.width = screenWidth;
+    canvas.height = screenHeight;
+    ctx = canvas.getContext('2d');
+    document.getElementById('game-container').appendChild(canvas);
 
-    // Create camera
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 1.6, 0); // Eye height
-
-    // Create renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    document.getElementById('game-container').appendChild(renderer.domElement);
-
-    // Add lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(50, 50, 25);
-    directionalLight.castShadow = true;
-    scene.add(directionalLight);
-
-    // Create ground
-    const groundGeometry = new THREE.PlaneGeometry(100, 100);
-    const groundMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x3a9d23,
-        roughness: 0.8
-    });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-    // Create walls
-    createWalls();
-
-    // Create enemies
+    // Spawn enemies
     spawnEnemies(10);
 
-    // Handle window resize
-    window.addEventListener('resize', onWindowResize);
-}
-
-function createWalls() {
-    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
-    const wallHeight = 5;
-    const wallThickness = 1;
-
-    // North wall
-    const northWall = new THREE.Mesh(
-        new THREE.BoxGeometry(100, wallHeight, wallThickness),
-        wallMaterial
-    );
-    northWall.position.set(0, wallHeight / 2, -50);
-    northWall.castShadow = true;
-    northWall.receiveShadow = true;
-    scene.add(northWall);
-
-    // South wall
-    const southWall = new THREE.Mesh(
-        new THREE.BoxGeometry(100, wallHeight, wallThickness),
-        wallMaterial
-    );
-    southWall.position.set(0, wallHeight / 2, 50);
-    southWall.castShadow = true;
-    southWall.receiveShadow = true;
-    scene.add(southWall);
-
-    // East wall
-    const eastWall = new THREE.Mesh(
-        new THREE.BoxGeometry(wallThickness, wallHeight, 100),
-        wallMaterial
-    );
-    eastWall.position.set(50, wallHeight / 2, 0);
-    eastWall.castShadow = true;
-    eastWall.receiveShadow = true;
-    scene.add(eastWall);
-
-    // West wall
-    const westWall = new THREE.Mesh(
-        new THREE.BoxGeometry(wallThickness, wallHeight, 100),
-        wallMaterial
-    );
-    westWall.position.set(-50, wallHeight / 2, 0);
-    westWall.castShadow = true;
-    westWall.receiveShadow = true;
-    scene.add(westWall);
+    // Setup controls
+    setupControls();
 }
 
 function spawnEnemies(count) {
+    enemies = [];
     for (let i = 0; i < count; i++) {
-        const geometry = new THREE.BoxGeometry(1, 2, 1);
-        const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-        const enemy = new THREE.Mesh(geometry, material);
+        let x, y;
+        do {
+            x = Math.floor(Math.random() * 8) + 1;
+            y = Math.floor(Math.random() * 8) + 1;
+        } while (worldMap[Math.floor(y)][Math.floor(x)] !== 0);
         
-        // Random position within bounds
-        enemy.position.set(
-            Math.random() * 80 - 40,
-            1,
-            Math.random() * 80 - 40
-        );
-        
-        enemy.castShadow = true;
-        enemy.userData.isEnemy = true;
-        enemy.userData.health = 100;
-        
-        scene.add(enemy);
-        enemies.push(enemy);
+        enemies.push({
+            x: x + 0.5,
+            y: y + 0.5,
+            health: 100,
+            size: 0.3,
+            active: true
+        });
     }
 }
 
-// Input handling
 function setupControls() {
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('click', onMouseClick);
-    
-    // Pointer lock for FPS controls
-    const gameContainer = document.getElementById('game-container');
-    gameContainer.addEventListener('click', () => {
-        if (gameState.playing && !gameState.paused) {
-            gameContainer.requestPointerLock();
+    document.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if (e.code === 'Escape' && gameState.playing) {
+            togglePause();
         }
     });
     
-    document.addEventListener('pointerlockchange', () => {
-        // Handle pointer lock change
+    document.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
     });
-}
+    
+    document.addEventListener('click', () => {
+        if (gameState.playing && !gameState.paused) {
+            shoot();
+        }
+    });
 
-function onKeyDown(event) {
-    switch (event.code) {
-        case 'KeyW': moveForward = true; break;
-        case 'KeyS': moveBackward = true; break;
-        case 'KeyA': moveLeft = true; break;
-        case 'KeyD': moveRight = true; break;
-        case 'Escape':
-            if (gameState.playing) {
-                togglePause();
-            }
-            break;
-    }
-}
-
-function onKeyUp(event) {
-    switch (event.code) {
-        case 'KeyW': moveForward = false; break;
-        case 'KeyS': moveBackward = false; break;
-        case 'KeyA': moveLeft = false; break;
-        case 'KeyD': moveRight = false; break;
-    }
-}
-
-function onMouseMove(event) {
-    if (document.pointerLockElement === document.getElementById('game-container') && gameState.playing) {
-        const movementX = event.movementX || 0;
-        const movementY = event.movementY || 0;
-        
-        euler.setFromQuaternion(camera.quaternion);
-        euler.y -= movementX * 0.002;
-        euler.x -= movementY * 0.002;
-        euler.x = Math.max(-PI_2, Math.min(PI_2, euler.x));
-        camera.quaternion.setFromEuler(euler);
-    }
-}
-
-function onMouseClick(event) {
-    if (document.pointerLockElement === document.getElementById('game-container') && gameState.playing) {
-        shoot();
-    }
+    window.addEventListener('resize', () => {
+        screenWidth = window.innerWidth;
+        screenHeight = window.innerHeight;
+        if (canvas) {
+            canvas.width = screenWidth;
+            canvas.height = screenHeight;
+        }
+    });
 }
 
 function shoot() {
@@ -203,37 +113,39 @@ function shoot() {
     gameState.ammo--;
     updateHUD();
     
-    // Raycast to detect hits
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+    // Check if we hit an enemy
+    const hitDistance = 0.5; // How close the ray needs to be to count as a hit
     
-    const intersects = raycaster.intersectObjects(enemies);
-    
-    if (intersects.length > 0) {
-        const hitEnemy = intersects[0].object;
-        if (hitEnemy.userData.isEnemy) {
-            hitEnemy.userData.health -= 34; // 3 shots to kill
-            
-            // Flash effect
-            const originalColor = hitEnemy.material.color.getHex();
-            hitEnemy.material.color.setHex(0xffffff);
-            setTimeout(() => {
-                if (hitEnemy.material) {
-                    hitEnemy.material.color.setHex(originalColor);
-                }
-            }, 100);
-            
-            if (hitEnemy.userData.health <= 0) {
-                // Remove enemy
-                scene.remove(hitEnemy);
-                enemies = enemies.filter(e => e !== hitEnemy);
-                gameState.score += 100;
-                updateHUD();
+    for (let enemy of enemies) {
+        if (!enemy.active) continue;
+        
+        // Calculate angle to enemy
+        const dx = enemy.x - player.x;
+        const dy = enemy.y - player.y;
+        const angleToEnemy = Math.atan2(dy, dx);
+        
+        // Normalize angle difference
+        let angleDiff = angleToEnemy - player.angle;
+        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+        
+        // Check if enemy is in crosshair (within a small angle)
+        if (Math.abs(angleDiff) < 0.1) {
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < 10) { // Max shooting range
+                enemy.health -= 34;
                 
-                // Check win condition
-                if (enemies.length === 0) {
-                    endGame(true);
+                if (enemy.health <= 0) {
+                    enemy.active = false;
+                    gameState.score += 100;
+                    updateHUD();
+                    
+                    // Check win condition
+                    if (enemies.filter(e => e.active).length === 0) {
+                        endGame(true);
+                    }
                 }
+                break; // Only hit one enemy per shot
             }
         }
     }
@@ -243,67 +155,193 @@ function togglePause() {
     gameState.paused = !gameState.paused;
     if (gameState.paused) {
         document.getElementById('menu').style.display = 'block';
-        document.exitPointerLock();
     } else {
         document.getElementById('menu').style.display = 'none';
     }
 }
 
-// Game loop
-function animate() {
-    requestAnimationFrame(animate);
+// Raycasting rendering
+function castRay(angle) {
+    const sin = Math.sin(angle);
+    const cos = Math.cos(angle);
     
-    if (!gameState.playing || gameState.paused) return;
+    let distance = 0;
+    const step = 0.05;
+    const maxDistance = 20;
     
-    // Update movement
-    const speed = 0.1;
-    direction.z = Number(moveForward) - Number(moveBackward);
-    direction.x = Number(moveRight) - Number(moveLeft);
-    direction.normalize();
-    
-    if (moveForward || moveBackward) {
-        velocity.z -= direction.z * speed;
-    }
-    if (moveLeft || moveRight) {
-        velocity.x -= direction.x * speed;
-    }
-    
-    camera.translateX(velocity.x);
-    camera.translateZ(velocity.z);
-    
-    // Apply boundaries
-    camera.position.x = Math.max(-48, Math.min(48, camera.position.x));
-    camera.position.z = Math.max(-48, Math.min(48, camera.position.z));
-    camera.position.y = 1.6; // Keep eye height constant
-    
-    // Damping
-    velocity.x *= 0.8;
-    velocity.z *= 0.8;
-    
-    // Simple enemy AI - rotate to face player
-    enemies.forEach(enemy => {
-        const dx = camera.position.x - enemy.position.x;
-        const dz = camera.position.z - enemy.position.z;
-        enemy.rotation.y = Math.atan2(dx, dz);
+    while (distance < maxDistance) {
+        distance += step;
+        const x = Math.floor(player.x + cos * distance);
+        const y = Math.floor(player.y + sin * distance);
         
-        // Move towards player slowly
-        const distance = Math.sqrt(dx * dx + dz * dz);
-        if (distance > 2) {
-            enemy.position.x += dx / distance * 0.02;
-            enemy.position.z += dz / distance * 0.02;
-        } else {
-            // Enemy is close, damage player
-            if (Math.random() < 0.01) { // 1% chance per frame
-                gameState.health -= 1;
-                updateHUD();
-                if (gameState.health <= 0) {
-                    endGame(false);
-                }
-            }
+        if (x < 0 || x >= worldMap[0].length || y < 0 || y >= worldMap.length) {
+            return { distance: maxDistance, type: 'wall' };
         }
+        
+        if (worldMap[y][x] === 1) {
+            return { distance, type: 'wall' };
+        }
+    }
+    
+    return { distance: maxDistance, type: 'none' };
+}
+
+function render() {
+    // Clear screen - sky and floor
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
+    ctx.fillStyle = '#3a9d23';
+    ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
+    
+    const numRays = screenWidth;
+    const rayStep = player.fov / numRays;
+    
+    // Cast rays for walls
+    for (let i = 0; i < numRays; i++) {
+        const rayAngle = player.angle - player.fov / 2 + rayStep * i;
+        const ray = castRay(rayAngle);
+        
+        // Fix fisheye effect
+        const correctedDistance = ray.distance * Math.cos(rayAngle - player.angle);
+        
+        if (ray.type === 'wall') {
+            const wallHeight = screenHeight / correctedDistance;
+            const brightness = Math.max(50, 255 - correctedDistance * 20);
+            ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
+            ctx.fillRect(
+                i,
+                screenHeight / 2 - wallHeight / 2,
+                1,
+                wallHeight
+            );
+        }
+    }
+    
+    // Render enemies (sprites)
+    const activeEnemies = enemies.filter(e => e.active);
+    
+    // Sort enemies by distance (far to near)
+    activeEnemies.sort((a, b) => {
+        const distA = Math.sqrt((a.x - player.x) ** 2 + (a.y - player.y) ** 2);
+        const distB = Math.sqrt((b.x - player.x) ** 2 + (b.y - player.y) ** 2);
+        return distB - distA;
     });
     
-    renderer.render(scene, camera);
+    for (let enemy of activeEnemies) {
+        const dx = enemy.x - player.x;
+        const dy = enemy.y - player.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Calculate angle to enemy
+        const angleToEnemy = Math.atan2(dy, dx);
+        let angleDiff = angleToEnemy - player.angle;
+        
+        // Normalize angle
+        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+        
+        // Check if enemy is in view
+        if (Math.abs(angleDiff) < player.fov / 2 + 0.5) {
+            const enemyScreenX = (angleDiff + player.fov / 2) / player.fov * screenWidth;
+            const enemySize = screenHeight / distance * enemy.size;
+            
+            // Draw enemy as a red rectangle
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(
+                enemyScreenX - enemySize / 2,
+                screenHeight / 2 - enemySize,
+                enemySize,
+                enemySize * 2
+            );
+            
+            // Draw enemy health bar
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(
+                enemyScreenX - enemySize / 2,
+                screenHeight / 2 - enemySize - 10,
+                enemySize,
+                5
+            );
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(
+                enemyScreenX - enemySize / 2,
+                screenHeight / 2 - enemySize - 10,
+                enemySize * (enemy.health / 100),
+                5
+            );
+        }
+    }
+}
+
+function update() {
+    if (!gameState.playing || gameState.paused) return;
+    
+    // Handle rotation
+    if (keys['KeyA'] || keys['ArrowLeft']) {
+        player.angle -= player.rotateSpeed;
+    }
+    if (keys['KeyD'] || keys['ArrowRight']) {
+        player.angle += player.rotateSpeed;
+    }
+    
+    // Handle movement
+    let moveX = 0;
+    let moveY = 0;
+    
+    if (keys['KeyW'] || keys['ArrowUp']) {
+        moveX = Math.cos(player.angle) * player.moveSpeed;
+        moveY = Math.sin(player.angle) * player.moveSpeed;
+    }
+    if (keys['KeyS'] || keys['ArrowDown']) {
+        moveX = -Math.cos(player.angle) * player.moveSpeed;
+        moveY = -Math.sin(player.angle) * player.moveSpeed;
+    }
+    
+    // Collision detection
+    const newX = player.x + moveX;
+    const newY = player.y + moveY;
+    
+    if (worldMap[Math.floor(newY)][Math.floor(newX)] === 0) {
+        player.x = newX;
+        player.y = newY;
+    }
+    
+    // Update enemies
+    for (let enemy of enemies) {
+        if (!enemy.active) continue;
+        
+        // Simple AI - move towards player
+        const dx = player.x - enemy.x;
+        const dy = player.y - enemy.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > 0.5) {
+            const moveSpeed = 0.01;
+            const newEnemyX = enemy.x + (dx / distance) * moveSpeed;
+            const newEnemyY = enemy.y + (dy / distance) * moveSpeed;
+            
+            // Check collision with walls
+            if (worldMap[Math.floor(newEnemyY)][Math.floor(newEnemyX)] === 0) {
+                enemy.x = newEnemyX;
+                enemy.y = newEnemyY;
+            }
+        }
+        
+        // Damage player if close
+        if (distance < 0.6 && Math.random() < 0.02) {
+            gameState.health -= 1;
+            updateHUD();
+            if (gameState.health <= 0) {
+                endGame(false);
+            }
+        }
+    }
+}
+
+function gameLoop() {
+    update();
+    render();
+    requestAnimationFrame(gameLoop);
 }
 
 function updateHUD() {
@@ -323,23 +361,20 @@ function startGame() {
     document.getElementById('game-container').style.display = 'block';
     document.getElementById('gameOver').style.display = 'none';
     
-    // Reset camera position
-    camera.position.set(0, 1.6, 0);
-    euler.set(0, 0, 0);
-    camera.quaternion.setFromEuler(euler);
+    // Reset player position
+    player.x = 5;
+    player.y = 5;
+    player.angle = 0;
     
-    // Clear and respawn enemies
-    enemies.forEach(enemy => scene.remove(enemy));
-    enemies = [];
+    // Respawn enemies
     spawnEnemies(10);
     
     updateHUD();
-    animate();
+    gameLoop();
 }
 
 function endGame(won) {
     gameState.playing = false;
-    document.exitPointerLock();
     document.getElementById('gameOver').style.display = 'block';
     document.getElementById('finalScore').textContent = gameState.score;
     
@@ -350,17 +385,10 @@ function endGame(won) {
     }
 }
 
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
 // Setup event listeners
 document.getElementById('startBtn').addEventListener('click', () => {
-    if (!scene) {
+    if (!canvas) {
         init();
-        setupControls();
     }
     startGame();
 });
@@ -368,3 +396,4 @@ document.getElementById('startBtn').addEventListener('click', () => {
 document.getElementById('restartBtn').addEventListener('click', () => {
     startGame();
 });
+

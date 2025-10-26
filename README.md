@@ -1,11 +1,12 @@
 # AI-FPS - Simple First Person Shooter Game
 
-A simple browser-based FPS game built with Three.js.
+A simple browser-based FPS game built with vanilla JavaScript and Canvas 2D using raycasting (similar to classic Wolfenstein 3D).
 
 ## Features
 
-- First-person perspective with mouse look controls
-- WASD movement
+- First-person perspective with keyboard controls
+- WASD/Arrow Keys for movement and rotation
+- Raycasting engine for 3D-like rendering
 - Shooting mechanics with ammo system
 - Enemy AI that tracks and approaches the player
 - Health system
@@ -17,9 +18,11 @@ A simple browser-based FPS game built with Three.js.
 1. Open `index.html` in a web browser
 2. Click "Start Game"
 3. Use the following controls:
-   - **WASD** - Move around
-   - **Mouse** - Look around (click to enable pointer lock)
-   - **Left Click** - Shoot
+   - **W/Up Arrow** - Move forward
+   - **S/Down Arrow** - Move backward
+   - **A/Left Arrow** - Rotate left
+   - **D/Right Arrow** - Rotate right
+   - **Click** - Shoot
    - **ESC** - Pause/Return to menu
 
 ## Objective
@@ -36,12 +39,13 @@ Eliminate all 10 enemies to win the game. Each enemy takes 3 shots to destroy. B
 
 ## Technical Details
 
-- Built with Three.js for 3D rendering
-- Vanilla JavaScript for game logic
+- Built with vanilla JavaScript - no external dependencies
+- Canvas 2D for rendering
+- Raycasting engine for pseudo-3D graphics
+- Simple AI pathfinding for enemies
 - HTML5 and CSS3 for UI
 - No build process required - just open in a browser!
 
 ## Browser Requirements
 
-- Modern browser with WebGL support
-- Pointer Lock API support (available in all modern browsers)
+- Modern browser with Canvas support (available in all modern browsers)
