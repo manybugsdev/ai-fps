@@ -18,8 +18,6 @@ const player = {
     x: 5,
     y: 5,
     angle: 0,
-    speed: 0,
-    rotSpeed: 0,
     fov: Math.PI / 3,
     moveSpeed: 0.05,
     rotateSpeed: 0.03
@@ -62,11 +60,14 @@ function init() {
 
 function spawnEnemies(count) {
     enemies = [];
+    const mapWidth = worldMap[0].length;
+    const mapHeight = worldMap.length;
+    
     for (let i = 0; i < count; i++) {
         let x, y;
         do {
-            x = Math.floor(Math.random() * 8) + 1;
-            y = Math.floor(Math.random() * 8) + 1;
+            x = Math.floor(Math.random() * (mapWidth - 2)) + 1;
+            y = Math.floor(Math.random() * (mapHeight - 2)) + 1;
         } while (worldMap[Math.floor(y)][Math.floor(x)] !== 0);
         
         enemies.push({
@@ -114,8 +115,6 @@ function shoot() {
     updateHUD();
     
     // Check if we hit an enemy
-    const hitDistance = 0.5; // How close the ray needs to be to count as a hit
-    
     for (let enemy of enemies) {
         if (!enemy.active) continue;
         
